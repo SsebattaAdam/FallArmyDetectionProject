@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "650955623330",
+    "project_id": "famdetecto",
+    "storage_bucket": "famdetecto.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:650955623330:android:7385b4bc37f5c0d6dec0fb",
+        "android_client_info": {
+          "package_name": "com.example.fammaize"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOwwbpka81oMcZHDWgJ-1Q-0E2u06TF50"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
