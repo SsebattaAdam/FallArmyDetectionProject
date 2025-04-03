@@ -1,14 +1,8 @@
-import 'package:camera/camera.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../../common/custom_appbar.dart';
 import '../../common/custom_container.dart';
 import '../../constants/constants.dart';
-import '../../detectionCode/upload_capture.dart';
-import '../../main.dart';
-import '../category/widgets/spraying_widget.dart';
 import '../category/widgets/weathercardwidget.dart';
 import 'newpage.dart';
 import 'WeatherAndSpraying.dart';
@@ -26,8 +20,8 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     return Scaffold(
       backgroundColor: kPrimary,
       appBar: AppBar(
-        title: Center(
-          child: const Text(
+        title: const Center(
+          child: Text(
             "Fall Armyworm Coverage",
             style: TextStyle(
               color: Colors.black,
@@ -42,96 +36,42 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
       body: SafeArea(
         child: CustomContainer(
           containerContent: Column(
-              children: [
-              SizedBox(height: 30),
-          HorizontalCardScroller(),
-                SizedBox(height: 20),
-          // First Container for Detection Options
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-            padding: EdgeInsets.all(16.w),
-            decoration: BoxDecoration(
-                color: kSecondary, // Green background
-                borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [
-            BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: Offset(2, 2),
+            children: [
+              SizedBox(height: 20),
+              // Weather & Risk Alerts Section
+              WeatherCardWidget(),
+              SizedBox(height: 20),
+              // Field Monitoring Reports
+              _buildSectionCard(
+                title: "Field Monitoring Reports",
+                icon: Icons.article,
+                onTap: () => Get.to(() => NewPage()),
+              ),
+              SizedBox(height: 12),
+              // Expert Opinions
+              _buildSectionCard(
+                title: "Expert Opinions",
+                icon: Icons.person,
+                onTap: () => Get.to(() => NewPage()),
+              ),
+              SizedBox(height: 12),
+              // Treatment & Recommendations
+              _buildSectionCard(
+                title: "Treatment & Recommendations",
+                icon: Icons.local_hospital,
+                onTap: () => Get.to(() => NewPage()),
+              ),
+              SizedBox(height: 20),
+              // Individual FAW Stages
+              _buildGrid(),
+            ],
           ),
-        ]),
-        child: Column(
-          children: [
-            // Upload an Image Card
-            _buildDetectionCard(
-              title: "Upload an Image,",
-              icon: Icons.upload,
-              onTap: () {
-                Get.to(() => UploadCaptureScreen());
-              },
-            ),
-            SizedBox(height: 12.h), // Spacing between cards
-            // Scanning the Plant Images Card
-            _buildDetectionCard(
-              title: "Scanning the Plant Images",
-              icon: Icons.camera_alt,
-              onTap: () {
-                Get.to(() => RealTimeDetection());
-              },
-            ),
-          ],
         ),
       ),
-
-      // Second Container for Other Options
-                SizedBox(height: 20),
-      Container(
-        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-            color: kSecondary, // Green background
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [
-        BoxShadow(
-        color: Colors.black.withOpacity(0.1),
-        blurRadius: 4,
-        offset: Offset(2, 2),
-      ),
-    ]),
-    child: GridView(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-    crossAxisCount: 2, // Two items per row
-    crossAxisSpacing: 12.w,
-    mainAxisSpacing: 12.h,
-    childAspectRatio: 1.2, // Slightly rectangular cards
-    ),
-    children: [
-    _buildCard(
-    title: "Pests and Diseases",
-    subtitle: "View Details",
-    icon: Icons.list,
-    destinationPage: Newpagetobedefined(),
-    ),
-    _buildCard(
-    title: "Recommendation",
-    subtitle: "View Details",
-    icon: Icons.list,
-    destinationPage: Newpagetobedefined(),
-    ),
-    ],
-    ),
-    ),
-    ],
-    ),
-    ),
-    ),
     );
   }
 
-  // Helper function to build a detection card
-  Widget _buildDetectionCard({
+  Widget _buildSectionCard({
     required String title,
     required IconData icon,
     required VoidCallback onTap,
@@ -139,11 +79,11 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: double.infinity, // Occupy full width
-        padding: EdgeInsets.all(16.w),
+        margin: EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: kPrimary, // Inner card background color
-          borderRadius: BorderRadius.circular(12.r),
+          color: kSecondary,
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -154,16 +94,12 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              size: 24.w,
-              color: kPrimaryLight
-            ),
-            SizedBox(width: 12.w), // Spacing between icon and text
+            Icon(icon, size: 24, color: kPrimaryLight),
+            SizedBox(width: 12),
             Text(
               title,
               style: TextStyle(
-                fontSize: 16.sp,
+                fontSize: 16,
                 color: kPrimaryLight,
                 fontWeight: FontWeight.bold,
               ),
@@ -174,61 +110,60 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     );
   }
 
-  // Helper function to build a standard card with navigation
-  Widget _buildCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Widget destinationPage,
-  }) {
+  Widget _buildGrid() {
+    return GridView(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.2,
+      ),
+      children: [
+        _buildGridCard("FAW Egg Stage", Icons.bug_report, NewPage()),
+        _buildGridCard("FAW Larval Damage", Icons.bug_report, NewPage()),
+        _buildGridCard("FAW Frass", Icons.bug_report, NewPage()),
+        _buildGridCard("Healthy Maize", Icons.grass, NewPage()),
+        _buildGridCard("FAW Larva", Icons.bug_report, NewPage()),
+      ],
+    );
+  }
+
+  Widget _buildGridCard(String title, IconData icon, Widget page) {
     return GestureDetector(
-      onTap: () {
-        // Navigate to the destination page
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => destinationPage),
-        );
-      },
+      onTap: () => Get.to(() => page),
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-            color: kPrimary, // Inner card background color
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [
-        BoxShadow(
-        color: Colors.black.withOpacity(0.1),
-        blurRadius: 4,
-        offset: Offset(2, 2),
+          color: kPrimary,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: Offset(2, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 32, color: kPrimaryLight),
+            SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                color: kPrimaryLight,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
-    ]),
-    child: Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-    Icon(
-    icon,
-    size: 32.w,
-    color: kPrimaryLight,
-    ),
-    SizedBox(height: 8.h), // Spacing between icon and text
-    Text(
-    title,
-    style: TextStyle(
-    fontSize: 18.sp,
-    color: kPrimaryLight,
-    fontWeight: FontWeight.bold,
-    ),
-    ),
-    SizedBox(height: 4.h), // Spacing between title and subtitle
-    Text(
-    subtitle,
-    style: TextStyle(
-    fontSize: 14.sp,
-    color: Colors.black.withOpacity(0.8),
-    ),
-    ),
-    ],
-    ),
-    ),
     );
   }
+
+  Widget NewPage() {}
 }
