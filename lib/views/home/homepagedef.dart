@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../common/custom_appbar.dart';
 import '../../common/custom_container.dart';
 import '../../constants/constants.dart';
+import '../../detectionCode/Upload_withApi_added.dart';
 import '../../detectionCode/upload_capture.dart';
 import '../../main.dart';
 import '../category/widgets/spraying_widget.dart';
@@ -67,7 +68,7 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
               title: "Upload an Image,",
               icon: Icons.upload,
               onTap: () {
-                Get.to(() => UploadCaptureScreen());
+                Get.to(() => UploadCaptureScreenapi());
               },
             ),
             SizedBox(height: 12.h), // Spacing between cards

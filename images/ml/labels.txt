@@ -1,0 +1,5 @@
+fall-armyworm-egg
+fall-armyworm-larval-damage
+fall-armyworm-frass
+healthy-maize
+fall-armyworm-larva
