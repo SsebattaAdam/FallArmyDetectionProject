@@ -27,9 +27,10 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     return Scaffold(
       backgroundColor: kPrimary,
       appBar: AppBar(
-        title: Center(
-          child: const Text(
-            "Fall Armyworm Coverage",
+        automaticallyImplyLeading: false,
+        title: const Center(
+          child: Text(
+            "Fall Armyworm Diagnosis ",
             style: TextStyle(
               color: Colors.black,
               fontSize: 24,

@@ -19,6 +19,7 @@ class CommunityPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text("Community"),
         actions: [
           if (user != null) // Show logout button only if the user is logged in

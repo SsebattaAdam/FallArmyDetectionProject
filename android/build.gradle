@@ -1,3 +1,4 @@
+
 allprojects {
     repositories {
         google()
@@ -40,4 +41,4 @@ configurations.all {
         force 'androidx.core:core-ktx:1.6.0'
     }
 }
-ext.kotlin_version = "1.8.0"
+ext.kotlin_version = "1.9.0"
