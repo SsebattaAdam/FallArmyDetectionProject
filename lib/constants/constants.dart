@@ -5,6 +5,18 @@ String googleApiKey = '';
 
 const kPrimary = Color(0xFFFFFFFF);
 const kPrimaryLight = Color(0xFF000000);
+// Medium green (the one I used)
+const kPrimaryGreen = Color(0xFF4CAF50);
+
+// Darker green
+const kPrimaryGreenDark = Color(0xFF388E3C);
+
+// Lighter green
+const kPrimaryGreenLight = Color(0xFF8BC34A);
+
+// Very light green (for backgrounds)
+const kPrimaryGreenLightest = Color(0xFFE8F5E9);
+
 const kSecondary = Color(0xfffFFFFF);
 const kSecondaryLight = Color(0xFFffe5db);
 const kTertiary = Color(0xff0078a6);

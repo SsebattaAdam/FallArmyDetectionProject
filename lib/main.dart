@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:fammaize/views/main_page.dart';
@@ -9,22 +11,61 @@ import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
+import 'Analytics/AnalyticsService.dart';
 import 'constants/constants.dart';
-
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
+import 'detectionCode/results.dart';
+
+
 late List<CameraDescription> _cameras;
 Widget defaultHome = main_page();
 
 Future<void> main() async {
+  // Record app start time
+  final startTime = DateTime.now();
+
+  // Initialize Flutter
   WidgetsFlutterBinding.ensureInitialized();
-  _cameras = await availableCameras();
-  await Firebase.initializeApp();
-  runApp(const MyApp());
+
+  // Initialize services in parallel
+  await Future.wait([
+    Firebase.initializeApp(),
+    availableCameras().then((cameras) => _cameras = cameras),
+  ]);
+
+  // Initialize analytics service
+  await Get.putAsync(() => AnalyticsService().init());
+
+  // Calculate and log startup time
+  final startupTime = DateTime.now().difference(startTime).inMilliseconds;
+  await AnalyticsService.to.logAppStartupTime(startupTime);
+
+  // Set up error handling
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    AnalyticsService.to.logError(
+      errorType: 'flutter_error',
+      errorMessage: details.exception.toString(),
+      screenName: details.context?.toString(),
+    );
+  };
+
+  // Run app with error zone
+  runZonedGuarded(
+        () => runApp(const MyApp()),
+        (error, stackTrace) {
+      AnalyticsService.to.logError(
+        errorType: 'zone_error',
+        errorMessage: error.toString(),
+      );
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -45,7 +86,20 @@ class MyApp extends StatelessWidget {
             iconTheme: const IconThemeData(color: kDark),
             primarySwatch: Colors.grey,
           ),
-          home: AuthWrapper(defaultHome: defaultHome), // Wrap the defaultHome with AuthWrapper
+          // Add analytics observer for automatic screen tracking
+          navigatorObservers: [
+            AnalyticsService.to.getObserver(),
+          ],
+          home: AuthWrapper(defaultHome: defaultHome),
+          // Track route changes
+          routingCallback: (routing) {
+            if (routing?.current != null && routing?.previous != null) {
+              AnalyticsService.to.logNavigation(
+                routing!.previous!,
+                routing.current!,
+              );
+            }
+          },
         );
       },
     );
@@ -66,17 +120,32 @@ class AuthWrapper extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // If the user is logged in, proceed to the defaultHome
+        // Track authentication state
         if (snapshot.hasData && snapshot.data != null) {
+          // User is logged in
+          final user = snapshot.data!;
+          AnalyticsService.to.setUserId(user.uid);
+          AnalyticsService.to.setUserProperty(
+            name: 'user_email_domain',
+            value: user.email?.split('@').last,
+          );
+          AnalyticsService.to.logLogin();
           return defaultHome;
         } else {
-          // If the user is not logged in, proceed to the defaultHome (or replace with a LoginScreen)
+          // User is not logged in
+          AnalyticsService.to.setUserId('anonymous_user');
+          AnalyticsService.to.logEvent(
+            name: 'anonymous_access',
+            parameters: {'timestamp': DateTime.now().millisecondsSinceEpoch},
+          );
           return defaultHome;
         }
       },
     );
   }
 }
+
+
 class RealTimeDetection extends StatefulWidget {
   const RealTimeDetection({super.key});
 
@@ -84,126 +153,410 @@ class RealTimeDetection extends StatefulWidget {
   State<RealTimeDetection> createState() => _RealTimeDetectionState();
 }
 
-class _RealTimeDetectionState extends State<RealTimeDetection> {
+class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindingObserver {
   late CameraController controller;
   bool isBusy = false;
   String result = "";
-  late ImageLabeler imageLabeler;
+  String recommendation = "";
+  bool _showTips = true; // Always show tips when screen opens
+  File? _currentImageFile; // Track the current image file
+
+  // API URL
+  final String apiUrl = "https://newapi-uxzc.onrender.com/detect";
+
+  // For controlling detection frequency
+  int _frameSkip = 0;
+  final int _processEveryNFrames = 30;
+
+  // For tracking detection confidence
+  double confidence = 0.0;
+
+  // List of cameras
+  late List<CameraDescription> _cameras;
+  bool _isCameraInitialized = false;
+  bool _isStreamActive = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeCamera();
-    _loadModel();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopCameraStream();
+    _cleanUpImageFile(); // Clean up any existing image file
+    controller.dispose();
+    super.dispose();
+  }
+
+  // Clean up the image file
+  void _cleanUpImageFile() {
+    if (_currentImageFile != null && _currentImageFile!.existsSync()) {
+      _currentImageFile!.deleteSync();
+    }
+    _currentImageFile = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!controller.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive) {
+      _stopCameraStream();
+    } else if (state == AppLifecycleState.resumed) {
+      _resetAndRestartCamera();
+    }
+  }
+
+  void _showSnackBar(String message) {
+    Get.snackbar(
+      'Alert',
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.black87,
+      colorText: Colors.white,
+      margin: EdgeInsets.all(8),
+      duration: Duration(seconds: 3),
+    );
   }
 
   Future<void> _initializeCamera() async {
-    controller = CameraController(
-      _cameras[0],
-      ResolutionPreset.max,
-      imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
-    );
+    try {
+      _cameras = await availableCameras();
+      controller = CameraController(
+        _cameras[0],
+        ResolutionPreset.medium,
+        imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.yuv420 : ImageFormatGroup.bgra8888,
+      );
 
-    await controller.initialize();
-    if (!mounted) return;
-    controller.startImageStream((image) {
-      if (!isBusy) {
-        isBusy = true;
-        _doImageLabeling(image);
-      }
-    });
-    setState(() {});
-  }
+      await controller.initialize();
+      if (!mounted) return;
 
-  Future<void> _loadModel() async {
-    final modelPath = await _getModelPath('images/ml/fallarmyworm_matadata.tflite');
-    final options = LocalLabelerOptions(confidenceThreshold: 0.8, modelPath: modelPath);
-    imageLabeler = ImageLabeler(options: options);
-  }
+      setState(() {
+        _isCameraInitialized = true;
+      });
 
-  Future<String> _getModelPath(String asset) async {
-    final path = '${(await getApplicationSupportDirectory()).path}/$asset';
-    await Directory(dirname(path)).create(recursive: true);
-    final file = File(path);
-    if (!await file.exists()) {
-      final byteData = await rootBundle.load(asset);
-      await file.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
-    }
-    return file.path;
-  }
-
-  Future<void> _doImageLabeling(CameraImage img) async {
-    result = "";
-    InputImage? inputImg = _inputImageFromCameraImage(img);
-    if (inputImg != null) {
-      final List<ImageLabel> labels = await imageLabeler.processImage(inputImg);
-      for (ImageLabel label in labels) {
-        result += "${label.label} (${label.confidence.toStringAsFixed(2)})\n";
-      }
-      setState(() => isBusy = false);
+      // Always show tips when coming back to this screen
+      setState(() {
+        _showTips = true;
+      });
+    } catch (e) {
+      print("Error initializing camera: $e");
+      _showSnackBar("Error initializing camera. Please restart the app.");
     }
   }
 
-  InputImage? _inputImageFromCameraImage(CameraImage image) {
-    final camera = _cameras[0];
-    final sensorOrientation = camera.sensorOrientation;
-    final rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
-    final format = InputImageFormatValue.fromRawValue(image.format.raw);
-    if (format == null || image.planes.isEmpty) return null;
-    final plane = image.planes.first;
-    return InputImage.fromBytes(
-      bytes: plane.bytes,
-      metadata: InputImageMetadata(
-        size: Size(image.width.toDouble(), image.height.toDouble()),
-        rotation: rotation!,
-        format: format,
-        bytesPerRow: plane.bytesPerRow,
-      ),
-    );
+  Future<void> _startCameraStream() async {
+    if (!_isStreamActive && _isCameraInitialized && mounted) {
+      try {
+        _frameSkip = 0;
+        await controller.startImageStream((image) {
+          if (!_showTips) { // Only process frames if tips are dismissed
+            _frameSkip++;
+            if (!isBusy && _frameSkip >= _processEveryNFrames) {
+              _frameSkip = 0;
+              isBusy = true;
+              _processFrame(image);
+            }
+          }
+        });
+        _isStreamActive = true;
+      } catch (e) {
+        print("Error starting camera stream: $e");
+      }
+    }
+  }
+
+  Future<void> _stopCameraStream() async {
+    if (_isStreamActive && _isCameraInitialized) {
+      try {
+        await controller.stopImageStream();
+        _isStreamActive = false;
+      } catch (e) {
+        print("Error stopping camera stream: $e");
+      }
+    }
+  }
+
+  Future<void> _resetAndRestartCamera() async {
+    if (_isCameraInitialized) {
+      await _stopCameraStream();
+      await Future.delayed(Duration(milliseconds: 300));
+
+      if (mounted) {
+        setState(() {
+          isBusy = false;
+          result = "";
+          recommendation = "";
+          confidence = 0.0;
+          _showTips = true; // Always show tips when coming back
+          _cleanUpImageFile(); // Clean up any existing image file
+        });
+      }
+    }
+  }
+
+  Future<void> _processFrame(CameraImage image) async {
+    try {
+      // Clean up previous image file if exists
+      _cleanUpImageFile();
+
+      // Convert CameraImage to File
+      final File imageFile = await _convertImageToFile(image);
+      _currentImageFile = imageFile; // Store the current image file
+
+      // Send to API
+      await _sendImageToAPI(imageFile);
+
+    } catch (e) {
+      print("Error processing frame: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isBusy = false;
+        });
+      }
+    }
+  }
+
+  Future<File> _convertImageToFile(CameraImage image) async {
+    final tempDir = await getTemporaryDirectory();
+    final tempFile = File('${tempDir.path}/temp_frame_${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+    try {
+      final XFile picture = await controller.takePicture();
+      final bytes = await picture.readAsBytes();
+      await tempFile.writeAsBytes(bytes);
+      return tempFile;
+    } catch (e) {
+      print("Error converting image: $e");
+      throw e;
+    }
+  }
+
+  Future<void> _sendImageToAPI(File imageFile) async {
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
+      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        var jsonResponse = json.decode(response.body);
+        String detectionResult = jsonResponse['result'];
+        String description = jsonResponse['description'];
+        double detectedConfidence = jsonResponse['confidence'].toDouble();
+
+        setState(() {
+          result = "$detectionResult (${detectedConfidence.toStringAsFixed(2)}%)";
+          recommendation = description;
+          confidence = detectedConfidence;
+        });
+
+        // Stop camera stream before navigating
+        await _stopCameraStream();
+
+        // Navigate to results screen
+        if (mounted) {
+          await Get.to(() => DetectionResultScreen(
+            image: imageFile,
+            result: result,
+            recommendation: recommendation,
+          ));
+
+          // When returning from results screen, reset everything
+          if (mounted) {
+            await _resetAndRestartCamera();
+          }
+        }
+      } else {
+        print("API Error: ${response.statusCode}");
+        _showSnackBar("Error analyzing image. Please try again.");
+      }
+    } catch (e) {
+      print("Exception in API call: $e");
+      _showSnackBar("Connection error. Please check your internet.");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: kPrimaryLight,
-        title: const Text('Realtime Detection', style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return WillPopScope(
+      onWillPop: () async {
+        await _stopCameraStream();
+        _cleanUpImageFile();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.green,
+          title: const Text(
+              'Realtime Detection',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              )
+          ),
+          centerTitle: true,
+          iconTheme: IconThemeData(color: Colors.white),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () async {
+              await _stopCameraStream();
+              _cleanUpImageFile();
+              Get.back();
+            },
+          ),
+        ),
+        body: Stack(
           children: [
-            controller.value.isInitialized
-                ? Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: SizedBox(
-                    height: MediaQuery.of(context).size.height - 300,
-                    child: AspectRatio(
-                      aspectRatio: controller.value.aspectRatio,
-                      child: CameraPreview(controller),
+            // Camera Preview
+            _isCameraInitialized
+                ? Container(
+              width: double.infinity,
+              height: double.infinity,
+              child: CameraPreview(controller),
+            )
+                : Center(child: CircularProgressIndicator(color: Colors.green)),
+
+            // Targeting overlay
+            if (_isCameraInitialized && !_showTips)
+              Positioned.fill(
+                child: Center(
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.green, width: 2),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),
-                Positioned.fill(
-                  child: Image.asset("images/f1.png", fit: BoxFit.fill),
-                ),
-              ],
-            )
-                : const CircularProgressIndicator(),
-            Card(
-              color: kPrimaryLight,
-              margin: const EdgeInsets.all(10),
-              child: SizedBox(
-                height: 150,
-                width: double.infinity,
-                child: Center(
-                  child: Text(result, style: const TextStyle(fontSize: 35, color: Colors.white)),
+              ),
+
+            // Processing indicator
+            if (isBusy)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.7),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.green),
+                        SizedBox(height: 16),
+                        Text(
+                          "Analyzing image...",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+
+            // Instruction text
+            if (_isCameraInitialized && !_showTips)
+              Positioned(
+                bottom: 20,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      "Point camera at corn leaf",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // Tips Overlay (always shown when _showTips is true)
+            if (_showTips && _isCameraInitialized)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.8),
+                  child: Center(
+                    child: Container(
+                      margin: EdgeInsets.all(20),
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Real-time Detection Tips",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                          SizedBox(height: 15),
+                          Text(
+                            "1. Hold the camera steady for best results.\n"
+                                "2. Position the leaf inside the green square.\n"
+                                "3. Ensure good lighting conditions.\n"
+                                "4. Keep the camera 15-20cm from the leaf.\n"
+                                "5. Wait for automatic detection to occur.",
+                            style: TextStyle(
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _showTips = false;
+                              });
+                              _startCameraStream();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 30,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: Text(
+                              "Start Detection",
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

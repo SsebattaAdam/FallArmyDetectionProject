@@ -109,6 +109,17 @@ class _DetectionResultScreenState extends State<DetectionResultScreen> {
       }
     });
   }
+  @override
+  void dispose() {
+    // Delete the image file if it exists
+    if (widget.image.existsSync()) {
+      widget.image.deleteSync();
+    }
+
+    // Optionally, clear any other data related to the results
+    flutterTts.stop(); // Stop any ongoing text-to-speech
+    super.dispose();
+  }
 
   String cleanResultText(String text) {
     return text.replaceAll(RegExp(r'^[01]\s*'), '');
