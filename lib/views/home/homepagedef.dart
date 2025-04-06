@@ -13,7 +13,9 @@ import '../category/widgets/spraying_widget.dart';
 import '../category/widgets/weathercardwidget.dart';
 import 'newpage.dart';
 import 'WeatherAndSpraying.dart';
-import 'faw_recommendation_stages_page.dart'; // Add this import
+import 'faw_recommendation_stages_page.dart';
+import 'package:fammaize/views/home/diagnosisdetailspage.dart';
+// Add this import
 
 class Homepage2Default extends StatefulWidget {
   const Homepage2Default({super.key});
@@ -116,10 +118,29 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
                       title: "Maize Monitoring Reports",
                       subtitle: "View Details",
                       icon: Icons.report,
-                      destinationPage: Newpagetobedefined(),
+                      destinationPage: DiagnosisDetailPage(
+                        diagnoses: [
+                          {
+                            'disease': 'Fall Armyworm',
+                            'date': DateTime.now().toIso8601String(), // or just DateTime.now(),
+                            'stage': 'Larval Damage',
+                          },
+                          {
+                            'disease': 'Fall Armyworm',
+                            'date': DateTime.now().subtract(Duration(days: 1)).toIso8601String(),
+                            'stage': 'Frass Stage',
+                          },
+                          {
+                            'disease': 'Fall Armyworm',
+                            'date': DateTime.now().subtract(Duration(days: 2)).toIso8601String(),
+                            'stage': 'Egg Stage',
+                          },
+                        ],
+                      ),
+
                     ),
                     _buildCard(
-                      title: "Treatment and Recommendations",
+                      title: "Treatment&Recommendations",
                       subtitle: "By FAW Stage",
                       icon: Icons.medical_services,
                       destinationPage: FAWRecommendationStagesPage(),

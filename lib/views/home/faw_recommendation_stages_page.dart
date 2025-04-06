@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fammaize/detectionCode/PesticideDetailsScreen.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -61,10 +62,17 @@ class FAWRecommendationStagesPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => StageDetailPage(
-                        stage: stages[index]['stage']!,
-                        symptoms: stages[index]['symptoms']!,
-                        recommendation: stages[index]['recommendation']!,
+                      builder: (context) => PesticideDetailScreen(
+                        product: {
+                          'name': stages[index]['stage'],
+                          'composition': 'Neem oil-based',
+                          'application_instructions': 'Apply on leaves',
+                          'application_method': 'Spray',
+                          'weather_conditions': 'Dry weather',
+                          'toxicity': 'Low toxicity',
+                          'safety_precautions': 'Wear gloves',
+                          'control_methods': 'Biological controls',
+                        },
                       ),
                     ),
                   );
