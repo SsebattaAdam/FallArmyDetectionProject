@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:fammaize/widgets/weathercardwidget.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
