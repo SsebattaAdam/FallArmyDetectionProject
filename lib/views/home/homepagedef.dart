@@ -3,6 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../Expertsandrecomendations/Expertinsites.dart';
+import '../../Expertsandrecomendations/documentupload.dart';
 import '../../common/custom_appbar.dart';
 import '../../common/custom_container.dart';
 import '../../constants/constants.dart';
@@ -25,29 +27,29 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kPrimary,
+      backgroundColor:  Colors.green[100],
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Center(
+        title: Center(
           child: Text(
             "Fall Armyworm Diagnosis ",
             style: TextStyle(
-              color: Colors.black,
+              color: Colors.green[100],
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
-        backgroundColor: kPrimary,
+        backgroundColor: Colors.green[800],
         elevation: 0,
       ),
       body: SafeArea(
         child: CustomContainer(
           containerContent: Column(
               children: [
-              SizedBox(height: 30),
-          HorizontalCardScroller(),
-                SizedBox(height: 20),
+              const SizedBox(height: 30),
+          const HorizontalCardScroller(),
+                const SizedBox(height: 20),
           // First Container for Detection Options
           Container(
             margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
@@ -59,7 +61,7 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
             BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
-            offset: Offset(2, 2),
+            offset: const Offset(2, 2),
           ),
         ]),
         child: Column(
@@ -69,7 +71,7 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
               title: "Upload an Image,",
               icon: Icons.upload,
               onTap: () {
-                Get.to(() => UploadCaptureScreenapi());
+                Get.to(() => const UploadCaptureScreenapi());
               },
             ),
             SizedBox(height: 12.h), // Spacing between cards
@@ -86,7 +88,7 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
       ),
 
       // Second Container for Other Options
-                SizedBox(height: 20),
+
       Container(
         margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
         padding: EdgeInsets.all(16.w),
@@ -111,16 +113,16 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     ),
     children: [
     _buildCard(
-    title: "Pests and Diseases",
+    title: "Herbicides",
     subtitle: "View Details",
-    icon: Icons.list,
-    destinationPage: Newpagetobedefined(),
+    icon: Icons.more_horiz_sharp,
+    destinationPage: ExpertInsightsPage(),
     ),
     _buildCard(
-    title: "Recommendation",
+    title: "Expert Insights",
     subtitle: "View Details",
-    icon: Icons.list,
-    destinationPage: Newpagetobedefined(),
+    icon: Icons.insights,
+    destinationPage:  DocumentUploadPage(),
     ),
     ],
     ),
@@ -155,18 +157,19 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
           ],
         ),
         child: Row(
+
           children: [
             Icon(
               icon,
               size: 24.w,
-              color: kPrimaryLight
+              color:  Colors.green[800],
             ),
             SizedBox(width: 12.w), // Spacing between icon and text
             Text(
               title,
               style: TextStyle(
                 fontSize: 16.sp,
-                color: kPrimaryLight,
+                color: Colors.black,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -209,7 +212,7 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     Icon(
     icon,
     size: 32.w,
-    color: kPrimaryLight,
+      color:  Colors.green[800],
     ),
     SizedBox(height: 8.h), // Spacing between icon and text
     Text(
