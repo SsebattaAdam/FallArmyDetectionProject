@@ -1,82 +1,91 @@
-FAM Maize - Fall Armyworm Detection & Management
-🌽 About FAM Maize
-FAM Maize is a comprehensive mobile application designed to help Ugandan farmers detect, monitor, and manage Fall Armyworm (Spodoptera frugiperda) infestations in maize crops. This destructive pest threatens food security and livelihoods across Sub-Saharan Africa, and early detection is crucial for effective management.
+# Fall Armyworm Detection and Management System (fammaize)
 
-Our solution leverages machine learning, geospatial analysis, and community support to provide timely and accurate detection of Fall Armyworm at various stages of infestation.
+A Flutter-based mobile application integrated with a Flask backend to help Ugandan farmers detect, monitor, and manage **Fall Armyworm (Spodoptera frugiperda)** infestations affecting maize crops.
 
-✨ Key Features
-📱 Screenshots
-🛠️ Technology Stack
-Frontend: Flutter for cross-platform mobile development
-Backend: Flask-based REST API
-Machine Learning: TensorFlow Lite for on-device image classification
-Geospatial: Google Maps API for location tracking and visualization
-Database: Firebase Firestore for data storage
-Authentication: Firebase Authentication
-Weather Data: OpenWeatherMap API
-📋 Requirements
-Android 6.0 (Marshmallow) or higher
-iOS 12.0 or higher
-Internet connection for most features
-GPS/Location services enabled
-Camera access permission
-Storage access permission
-🚀 Installation
-Download
-For Developers
-Clone the repository:
+---
 
-git clone https://github.com/yourusername/fam-maize.git
-cd fam-maize
+## 🌾 Overview
 
-Copy
-Execute
+Fall Armyworm is a highly destructive pest that poses a serious threat to maize production in Sub-Saharan Africa. This system leverages machine learning, geolocation, weather data, and community interaction to provide a digital solution for early detection, accurate diagnosis, and guided treatment of infestations.
 
-Install dependencies:
+---
 
+## 📱 Features
+
+### 🔍 Detection
+- Upload maize leaf images via camera or gallery.
+- Uses TensorFlow Lite model to classify images as:
+  - Healthy
+  - Eggs
+  - Frass
+  - Larval Damage
+- Confidence score provided for each detection.
+
+### 🌐 Geolocation
+- GPS coordinates captured automatically.
+- Maps detections to specific Ugandan districts.
+- Displays results on an interactive district-level map.
+
+### 📊 Analytics Dashboard
+- View district-wise infestation trends.
+- Filter data by day, week, month.
+- Charts: stage distribution, comparisons, and detection history.
+
+### ☁️ Weather Integration
+- Real-time local weather from OpenWeatherMap API.
+- Tailors treatment advice based on temperature, rainfall, and humidity.
+
+### 💊 Treatment Recommendations
+- Stage-based recommendations for pest control.
+- Includes:
+  - Pesticide name
+  - Application time
+  - Mixing ratios
+  - Safety guidelines
+
+### 📥 Reports
+- Downloadable diagnosis reports per detection.
+- Includes image preview, GPS, timestamp, and treatment advice.
+
+### 🧑🏾‍🤝‍🧑🏽 Community Support
+- Farmers can describe problems, upload supporting images, and get expert help.
+- Experts provide structured replies with guidance.
+
+### 🧠 Detection History
+- All past detections stored with timestamp, GPS, and results.
+
+---
+
+## 🧱 System Architecture
+
+- **Frontend:** Flutter mobile application
+- **Backend:** Flask REST API
+- **ML Model:** TensorFlow Lite (image classification)
+- **Database:** SQLite / PostgreSQL
+- **Cloud APIs:** OpenWeatherMap, Google Maps
+
+---
+
+## ⚙️ Technical Specifications
+
+| Feature                     | Details                                                              |
+|----------------------------|----------------------------------------------------------------------|
+| Version Control            | Git with GitHub; branches for `main`, `geo-feature`, `analytics-enhancements` |
+| Image Input                | Maize leaf via camera or gallery  , Realtime scanning                                   |
+| Output                     | Infestation stage, report, treatment advice                          |
+| Location Validation        | Ensures GPS points are within Uganda                                |
+| Internet Dependency        | Required for weather, maps, and community support                    |
+| Security                   | HTTPS, role-based access, API rate-limiting                         |
+| Error Handling             | Human-readable feedback and internal logging                        |
+
+---
+
+## 🚀 Installation & Getting Started
+
+### 📱 Flutter App
+
+```bash
+git clone https://github.com/SsebattaAdam/FallArmyDetectionProject/
+cd fammaize
 flutter pub get
-
-Copy
-Execute
-
-Configure Firebase:
-
-Create a new Firebase project
-Add Android and iOS apps to your Firebase project
-Download and add the configuration files
-Enable Authentication, Firestore, and Storage services
-Configure API keys:
-
-Create a .env file in the project root
-Add your API keys
-Run the application:
-
 flutter run
-
-Copy
-Execute
-
-📖 How to Use
-Detection Module
-Tap the "Detect" button on the home screen
-Choose to take a new photo or select from gallery
-Ensure the image clearly shows the maize leaf
-Submit the image for analysis
-View the detection results and recommended treatments
-Save or share the detection report
-Map Visualization
-Navigate to the "Map" tab
-View all detections mapped across Uganda
-Filter by date range, district, or infestation stage
-Tap on markers to view detection details
-Analytics Dashboard
-Access the "Analytics" section
-View infestation trends over time
-Compare district-wise statistics
-Generate and download reports
-Community Support
-Go to the "Community" tab
-Create a new post with your question or concern
-Optionally attach images
-Receive responses from experts and other farmers
-Search existing discussions for similar issues
