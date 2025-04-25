@@ -127,7 +127,7 @@ class _SprayingConditionsCardState extends State<SprayingConditionsCard> {
               children: [
                 Icon(
                   Icons.calendar_today,
-                  color:  kPrimaryLight,
+                  color:  Colors.green[800],
                   size: 16,
                 ),
                 SizedBox(width: 8),
@@ -168,7 +168,7 @@ class _SprayingConditionsCardState extends State<SprayingConditionsCard> {
                     children: [
                       Icon(
                         Icons.access_time,
-                        color:  kPrimaryLight,
+                        color:  Colors.green[800],
                         size: 16,
                       ),
                       SizedBox(width: 8),
@@ -186,7 +186,7 @@ class _SprayingConditionsCardState extends State<SprayingConditionsCard> {
                     children: [
                       Icon(
                         Icons.location_on,
-                        color:  kPrimaryLight,
+                        color:  Colors.green[800],
                         size: 16,
                       ),
                       SizedBox(width: 8),
@@ -204,7 +204,7 @@ class _SprayingConditionsCardState extends State<SprayingConditionsCard> {
                     children: [
                       Icon(
                         Icons.water_drop,
-                        color:  kPrimaryLight,
+                        color:  Colors.green[800],
                         size: 16,
                       ),
                       SizedBox(width: 8),

@@ -120,7 +120,7 @@ class _WeatherCardState extends State<WeatherCard> {
               children: [
                 Icon(
                   Icons.calendar_today,
-                  color:  kPrimaryLight,
+                  color:  Colors.green[800],
                   size: 16,
                 ),
                 SizedBox(width: 8),
@@ -140,7 +140,7 @@ class _WeatherCardState extends State<WeatherCard> {
                 children: [
                   Icon(
                     Icons.error_outline,
-                    color:  kPrimaryLight,
+                    color:  Colors.green[800],
                     size: 32,
                   ),
                   SizedBox(height: 8),
@@ -161,7 +161,7 @@ class _WeatherCardState extends State<WeatherCard> {
                     children: [
                       Icon(
                         Icons.thermostat,
-                        color:  kPrimaryLight,
+                        color:  Colors.green[800],
                         size: 24,
                       ),
                       SizedBox(width: 8),
@@ -180,7 +180,7 @@ class _WeatherCardState extends State<WeatherCard> {
                     children: [
                       Icon(
                         Icons.cloud,
-                        color:  kPrimaryLight,
+                        color:  Colors.green[800],
                         size: 24,
                       ),
                       SizedBox(width: 8),
@@ -198,7 +198,7 @@ class _WeatherCardState extends State<WeatherCard> {
                     children: [
                       Icon(
                         Icons.location_on,
-                        color:  kPrimaryLight,
+                        color:  Colors.green[800],
                         size: 16,
                       ),
                       SizedBox(width: 8),

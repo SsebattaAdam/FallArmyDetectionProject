@@ -7,9 +7,13 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 
 
+import '../analytics2/analyticspage.dart';
+import '../analytics2/wrapper widget.dart';
 import '../constants/constants.dart';
 import '../controllers/tab_index_controller.dart';
 
+import '../map/views/mappage.dart';
+import '../map/views/newprov.dart';
 import 'community/community.dart';
 import 'home/newpage.dart';
 import 'home/homepagedef.dart';
@@ -22,7 +26,8 @@ class main_page extends StatelessWidget {
      Homepage2Default(),
 
      CommunityPage(),
-     Newpagetobedefined()
+     MapPageWrapper(),
+     AnalyticsScreenWrapper()
    ];
 
   @override
@@ -34,12 +39,13 @@ class main_page extends StatelessWidget {
        pages[controller.tabIndex],
           Align(
             alignment:  Alignment.bottomCenter,
-            child: Theme(data: Theme.of(context).copyWith(canvasColor: kPrimary),
+            child: Theme(data: Theme.of(context).copyWith(canvasColor:  Colors.green[800]),
                 child: BottomNavigationBar(
+                  backgroundColor:  Colors.green[800],
                     showSelectedLabels: true,
                     showUnselectedLabels: true,
-                    unselectedIconTheme: const IconThemeData(color: Colors.black38),
-                    selectedIconTheme: const IconThemeData(color: kPrimaryLight),
+                    unselectedIconTheme:  IconThemeData(color:  Colors.green[100],),
+                    selectedIconTheme:  IconThemeData(color:Colors.green[200],),
                     onTap: (index) {
                       controller.setTabIndex(index);
                     },
@@ -48,6 +54,7 @@ class main_page extends StatelessWidget {
                       BottomNavigationBarItem(
                         icon: controller.tabIndex ==0?  Icon(AntDesign.appstore1): Icon(AntDesign.appstore_o),
                         label: 'Home',
+
                       ),
 
                       const BottomNavigationBarItem(
@@ -60,6 +67,11 @@ class main_page extends StatelessWidget {
 
                         icon:  controller.tabIndex == 2 ? Icon(FontAwesome.map): Icon(FontAwesome.map_o),
                         label: 'coverage',
+                      ),
+                      BottomNavigationBarItem(
+
+                        icon:  controller.tabIndex == 3 ? Icon(FontAwesome.line_chart): Icon(FontAwesome.line_chart),
+                        label: 'Analytics',
                       ),
                     ]
                 )
