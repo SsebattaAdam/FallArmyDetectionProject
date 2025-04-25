@@ -3,18 +3,22 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+
 import '../../Expertsandrecomendations/Expertinsites.dart';
 import '../../Expertsandrecomendations/documentupload.dart';
+
 import '../../common/custom_appbar.dart';
 import '../../common/custom_container.dart';
 import '../../constants/constants.dart';
-import '../../detectionCode/Upload_withApi_added.dart';
 import '../../detectionCode/upload_capture.dart';
 import '../../main.dart';
 import '../category/widgets/spraying_widget.dart';
 import '../category/widgets/weathercardwidget.dart';
 import 'newpage.dart';
 import 'WeatherAndSpraying.dart';
+import 'faw_recommendation_stages_page.dart';
+import 'package:fammaize/views/home/diagnosisdetailspage.dart';
+// Add this import
 
 class Homepage2Default extends StatefulWidget {
   const Homepage2Default({super.key});
@@ -46,6 +50,7 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
       body: SafeArea(
         child: CustomContainer(
           containerContent: Column(
+
               children: [
               const SizedBox(height: 30),
           const HorizontalCardScroller(),
@@ -131,10 +136,11 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     ),
     ),
     ),
+
+            
     );
   }
 
-  // Helper function to build a detection card
   Widget _buildDetectionCard({
     required String title,
     required IconData icon,
@@ -143,10 +149,10 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: double.infinity, // Occupy full width
+        width: double.infinity,
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: kPrimary, // Inner card background color
+          color: kPrimary,
           borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
@@ -159,12 +165,14 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
         child: Row(
 
           children: [
+
             Icon(
               icon,
               size: 24.w,
               color:  Colors.green[800],
             ),
             SizedBox(width: 12.w), // Spacing between icon and text
+
             Text(
               title,
               style: TextStyle(
@@ -179,7 +187,6 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     );
   }
 
-  // Helper function to build a standard card with navigation
   Widget _buildCard({
     required String title,
     required String subtitle,
@@ -188,7 +195,6 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
   }) {
     return GestureDetector(
       onTap: () {
-        // Navigate to the destination page
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => destinationPage),
@@ -197,14 +203,41 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-            color: kPrimary, // Inner card background color
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: [
-        BoxShadow(
-        color: Colors.black.withOpacity(0.1),
-        blurRadius: 4,
-        offset: Offset(2, 2),
+          color: kPrimary,
+          borderRadius: BorderRadius.circular(12.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: Offset(2, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 32.w, color: kPrimaryLight),
+            SizedBox(height: 8.h),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18.sp,
+                color: kPrimaryLight,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.black.withOpacity(0.8),
+              ),
+            ),
+          ],
+        ),
       ),
+
     ]),
     child: Column(
     mainAxisAlignment: MainAxisAlignment.center,
@@ -234,6 +267,7 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     ],
     ),
     ),
+
     );
   }
 }

@@ -217,14 +217,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
-  dart_earcut:
+  dbus:
     dependency: transitive
     description:
-      name: dart_earcut
-      sha256: e485001bfc05dcbc437d7bfb666316182e3522d4c3f9668048e004d0eb2ce43b
+      name: dbus
+      sha256: "79e0c23480ff85dc68de79e2cd6334add97e48f7f4865d17686dd6ea81a47e8c"
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.0"
+    version: "0.7.11"
   device_frame:
     dependency: transitive
     description:
@@ -257,6 +257,7 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
+
   equatable:
     dependency: transitive
     description:
@@ -265,6 +266,7 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.7"
+
   fake_async:
     dependency: transitive
     description:
@@ -478,8 +480,32 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.0"
-  flutter_localizations:
+  flutter_local_notifications:
     dependency: "direct main"
+    description:
+      name: flutter_local_notifications
+      sha256: "401643a6ea9d8451365f2ec11145335bf130560cfde367bdf8f0be6d60f89479"
+      url: "https://pub.dev"
+    source: hosted
+    version: "15.1.3"
+  flutter_local_notifications_linux:
+    dependency: transitive
+    description:
+      name: flutter_local_notifications_linux
+      sha256: c49bd06165cad9beeb79090b18cd1eb0296f4bf4b23b84426e37dd7c027fc3af
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.1"
+  flutter_local_notifications_platform_interface:
+    dependency: transitive
+    description:
+      name: flutter_local_notifications_platform_interface
+      sha256: "85f8d07fe708c1bdcf45037f2c0109753b26ae077e9d9e899d55971711a4ea66"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.2.0"
+  flutter_localizations:
+    dependency: transitive
     description: flutter
     source: sdk
     version: "0.0.0"
@@ -487,9 +513,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_map
-      sha256: "82786b8e1ffbff079487eeeed59a34e8a0b09896dd7713d8e1dc193d673496b5"
+      sha256: "5286f72f87deb132daa1489442d6cc46e986fc105cb727d9ae1b602b35b1d1f3"
       url: "https://pub.dev"
     source: hosted
+
     version: "8.0.0"
   flutter_pdfview:
     dependency: "direct main"
@@ -499,6 +526,7 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0+1"
+
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -933,14 +961,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
-  logger:
-    dependency: transitive
-    description:
-      name: logger
-      sha256: be4b23575aac7ebf01f225a241eb7f6b5641eeaf43c6a8613510fc2f8cf187d1
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.5.0"
   lottie:
     dependency: "direct main"
     description:
@@ -1482,6 +1502,7 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.4"
+
   timeago:
     dependency: "direct main"
     description:
@@ -1490,6 +1511,7 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.7.0"
+
   typed_data:
     dependency: transitive
     description:
