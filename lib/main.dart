@@ -20,13 +20,22 @@ import 'package:path/path.dart';
 import 'package:provider/provider.dart';
 import 'Analytics/AnalyticsService.dart';
 import 'constants/constants.dart';
-import 'detectionCode/results.dart';
-import 'map/providerformap/providerformap.dart';
+
+import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
+import 'package:firebase_analytics/firebase_analytics.dart'; // For FirebaseAnalytics
+
 
 late List<CameraDescription> _cameras;
 Widget defaultHome = main_page();
 
 Future<void> main() async {
+
   // Ensure Flutter is initialized first
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -36,20 +45,25 @@ Future<void> main() async {
       Firebase.initializeApp(),
       availableCameras().then((cameras) => _cameras = cameras),
       dotenv.load(fileName: ".env"), // Load environment variables
+
+
     ]);
 
     // Initialize analytics service
     await Get.putAsync(() => AnalyticsService().init());
 
+
     // Set up error handling
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
       AnalyticsService.to.logError(
+
         errorType: 'flutter_error',
         errorMessage: details.exception.toString(),
         screenName: details.context?.toString(),
       );
     };
+
 
     // Run app in the same zone
     runApp(const MyApp());
@@ -57,6 +71,7 @@ Future<void> main() async {
   } catch (error, stackTrace) {
     print('Error during initialization: $error');
     // Still run the app even if initialization fails
+
     runApp(const MyApp());
   }
 }
@@ -155,19 +170,78 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
   String recommendation = "";
   bool _showTips = true; // Always show tips when screen opens
   File? _currentImageFile; // Track the current image file
-  // API URL
-  final String apiUrl = "https://fastapitest-1qsv.onrender.com/detect";
-  // For controlling detection frequency
-  int _frameSkip = 0;
-  final int _processEveryNFrames = 30;
-  // For tracking detection confidence
-  double confidence = 0.0;
-  // List of cameras
-  late List<CameraDescription> _cameras;
-  bool _isCameraInitialized = false;
-  bool _isStreamActive = false;
 
-  // Location data
+
+  // In your _RealTimeDetectionState class:
+
+// Add this when the screen first loads
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeCamera();
+    AnalyticsService.to.logScreenView(
+      screenName: 'realtime_detection',
+      screenClass: 'RealTimeDetection',
+    );
+  }
+
+// Add this when processing starts
+  Future<void> _processFrame(CameraImage image) async {
+    try {
+      AnalyticsService.to.logDetectionAttempt(
+        method: 'realtime_camera',
+        source: 'camera_stream',
+      );
+      // ... rest of your existing code
+    } catch (e) {
+      AnalyticsService.to.logDetectionError(
+        method: 'realtime_camera',
+        errorType: 'processing_error',
+        errorMessage: e.toString(),
+      );
+      // ... rest of error handling
+    }
+  }
+
+// Add this when getting API results
+  Future<void> _sendImageToAPI(File imageFile) async {
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
+      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+      // Declare variables before using them
+      final startTime = DateTime.now(); // For measuring processing time
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        var jsonResponse = json.decode(response.body);
+        String detectionResult = jsonResponse['result']; // Define here
+        double detectedConfidence = jsonResponse['confidence'].toDouble();
+
+        setState(() {
+          result = "$detectionResult (${detectedConfidence.toStringAsFixed(2)}%)";
+          recommendation = jsonResponse['description'];
+          confidence = detectedConfidence;
+        });
+
+        // Log detection result
+        await AnalyticsService.to.logDetectionResult(
+          method: 'api_call',
+          result: detectionResult,
+          confidence: detectedConfidence,
+          isArmyworm: detectionResult.toLowerCase().contains('armyworm'),
+          processingTimeMs: DateTime.now().difference(startTime).inMilliseconds,
+        );
+      }
+    } catch (e) {
+      // Error handling
+    }
+  }
+
+
+
   Position? _currentPosition;
   bool _isLocationLoading = false;
   String? _district;
@@ -179,6 +253,7 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
     _initializeCamera();
     _getCurrentLocation();
   }
+
 
   @override
   void dispose() {
@@ -361,6 +436,7 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
     }
   }
 
+
   Future<void> _processFrame(CameraImage image) async {
     try {
       // Check if location is available
@@ -394,6 +470,7 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
     }
   }
 
+
   Future<File> _convertImageToFile(CameraImage image) async {
     final tempDir = await getTemporaryDirectory();
     final tempFile = File('${tempDir.path}/temp_frame_${DateTime.now().millisecondsSinceEpoch}.jpg');
@@ -407,6 +484,7 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
       throw e;
     }
   }
+
 
   Future<void> _sendImageToAPI(File imageFile) async {
     try {
@@ -473,6 +551,7 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
       _showSnackBar("Connection error. Please check your internet.");
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
