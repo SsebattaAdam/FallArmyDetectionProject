@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
+import '../../Expertsandrecomendations/Expertinsites.dart';
+import '../../Expertsandrecomendations/documentupload.dart';
+
 import '../../common/custom_appbar.dart';
 import '../../common/custom_container.dart';
 import '../../constants/constants.dart';
@@ -28,136 +31,113 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kPrimary,
+      backgroundColor:  Colors.green[100],
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Center(
+        title: Center(
           child: Text(
             "Fall Armyworm Diagnosis ",
             style: TextStyle(
-              color: Colors.black,
+              color: Colors.green[100],
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
-        backgroundColor: kPrimary,
+        backgroundColor: Colors.green[800],
         elevation: 0,
       ),
       body: SafeArea(
         child: CustomContainer(
           containerContent: Column(
-            children: [
-              SizedBox(height: 30),
-              HorizontalCardScroller(),
-              SizedBox(height: 20),
 
-              // First Container for Detection Options
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: kSecondary,
-                  borderRadius: BorderRadius.circular(12.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: Offset(2, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    _buildDetectionCard(
-                      title: "Upload an Image,",
-                      icon: Icons.upload,
-                      onTap: () {
-                        Get.to(() => UploadCaptureScreen());
-                      },
-                    ),
-                    SizedBox(height: 12.h),
-                    _buildDetectionCard(
-                      title: "Scanning the Plant Images",
-                      icon: Icons.camera_alt,
-                      onTap: () {
-                        Get.to(() => RealTimeDetection());
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              // Second Container for Monitoring Options
-              SizedBox(height: 20),
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: kSecondary,
-                  borderRadius: BorderRadius.circular(12.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: Offset(2, 2),
-                    ),
-                  ],
-                ),
-                child: GridView(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12.w,
-                    mainAxisSpacing: 12.h,
-                    childAspectRatio: 1.2,
-                  ),
-                  children: [
-                    _buildCard(
-                      title: "Maize Monitoring Reports",
-                      subtitle: "View Details",
-                      icon: Icons.report,
-                      destinationPage: DiagnosisDetailPage(
-                        diagnoses: [
-                          {
-                            'disease': 'Fall Armyworm',
-                            'date': DateTime.now().toIso8601String(), // or just DateTime.now(),
-                            'stage': 'Larval Damage',
-                          },
-                          {
-                            'disease': 'Fall Armyworm',
-                            'date': DateTime.now().subtract(Duration(days: 1)).toIso8601String(),
-                            'stage': 'Frass Stage',
-                          },
-                          {
-                            'disease': 'Fall Armyworm',
-                            'date': DateTime.now().subtract(Duration(days: 2)).toIso8601String(),
-                            'stage': 'Egg Stage',
-                          },
-                        ],
-                      ),
-
-                    ),
-                    _buildCard(
-                      title: "Treatment&Recommendations",
-                      subtitle: "By FAW Stage",
-                      icon: Icons.medical_services,
-                      destinationPage: FAWRecommendationStagesPage(),
-                    ),
-                    _buildCard(
-                      title: "Expert Opinions",
-                      subtitle: "View Insights",
-                      icon: Icons.person_search,
-                      destinationPage: Newpagetobedefined(),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              children: [
+              const SizedBox(height: 30),
+          const HorizontalCardScroller(),
+                const SizedBox(height: 20),
+          // First Container for Detection Options
+          Container(
+            margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+                color: kSecondary, // Green background
+                borderRadius: BorderRadius.circular(12.r),
+                boxShadow: [
+            BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(2, 2),
           ),
+        ]),
+        child: Column(
+          children: [
+            // Upload an Image Card
+            _buildDetectionCard(
+              title: "Upload an Image,",
+              icon: Icons.upload,
+              onTap: () {
+                Get.to(() => const UploadCaptureScreenapi());
+              },
+            ),
+            SizedBox(height: 12.h), // Spacing between cards
+            // Scanning the Plant Images Card
+            _buildDetectionCard(
+              title: "Scanning the Plant Images",
+              icon: Icons.camera_alt,
+              onTap: () {
+                Get.to(() => RealTimeDetection());
+              },
+            ),
+          ],
         ),
       ),
+
+      // Second Container for Other Options
+
+      Container(
+        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+            color: kSecondary, // Green background
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+        BoxShadow(
+        color: Colors.black.withOpacity(0.1),
+        blurRadius: 4,
+        offset: Offset(2, 2),
+      ),
+    ]),
+    child: GridView(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: 2, // Two items per row
+    crossAxisSpacing: 12.w,
+    mainAxisSpacing: 12.h,
+    childAspectRatio: 1.2, // Slightly rectangular cards
+    ),
+    children: [
+    _buildCard(
+    title: "Herbicides",
+    subtitle: "View Details",
+    icon: Icons.more_horiz_sharp,
+    destinationPage: ExpertInsightsPage(),
+    ),
+    _buildCard(
+    title: "Expert Insights",
+    subtitle: "View Details",
+    icon: Icons.insights,
+    destinationPage:  DocumentUploadPage(),
+    ),
+    ],
+    ),
+    ),
+    ],
+    ),
+    ),
+    ),
+
+            
     );
   }
 
@@ -183,14 +163,21 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
           ],
         ),
         child: Row(
+
           children: [
-            Icon(icon, size: 24.w, color: kPrimaryLight),
-            SizedBox(width: 12.w),
+
+            Icon(
+              icon,
+              size: 24.w,
+              color:  Colors.green[800],
+            ),
+            SizedBox(width: 12.w), // Spacing between icon and text
+
             Text(
               title,
               style: TextStyle(
                 fontSize: 16.sp,
-                color: kPrimaryLight,
+                color: Colors.black,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -250,6 +237,37 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
           ],
         ),
       ),
+
+    ]),
+    child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+    Icon(
+    icon,
+    size: 32.w,
+      color:  Colors.green[800],
+    ),
+    SizedBox(height: 8.h), // Spacing between icon and text
+    Text(
+    title,
+    style: TextStyle(
+    fontSize: 18.sp,
+    color: kPrimaryLight,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
+    SizedBox(height: 4.h), // Spacing between title and subtitle
+    Text(
+    subtitle,
+    style: TextStyle(
+    fontSize: 14.sp,
+    color: Colors.black.withOpacity(0.8),
+    ),
+    ),
+    ],
+    ),
+    ),
+
     );
   }
 }

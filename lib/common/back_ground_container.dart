@@ -24,10 +24,10 @@ class BackGroundContainer extends StatelessWidget {
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20)
         ),
-        image: DecorationImage(image: AssetImage('assets/images/restaurant_bk.png'),
-            fit: BoxFit.cover,
-          opacity: .7
-        )
+        // image: DecorationImage(image: AssetImage('assets/images/restaurant_bk.png'),
+        //     fit: BoxFit.cover,
+        //   opacity: .7
+        // )
       ),
       child: child,
     );
