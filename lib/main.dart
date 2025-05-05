@@ -19,7 +19,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-
+import 'package:flutter/foundation.dart'; // For kDebugMode
+import 'package:firebase_analytics/firebase_analytics.dart'; // For FirebaseAnalytics
 import 'detectionCode/results.dart';
 
 
@@ -27,45 +28,73 @@ late List<CameraDescription> _cameras;
 Widget defaultHome = main_page();
 
 Future<void> main() async {
-  // Record app start time
+  // Record app start time for performance measurement
   final startTime = DateTime.now();
 
-  // Initialize Flutter
+  // Initialize Flutter binding
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize services in parallel
-  await Future.wait([
-    Firebase.initializeApp(),
-    availableCameras().then((cameras) => _cameras = cameras),
-  ]);
+  try {
+    // Initialize Firebase and cameras in parallel
+    await Future.wait([
+      Firebase.initializeApp().then((_) {
+        if (kDebugMode) {
+          FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+          debugPrint('Firebase Analytics debug mode enabled');
+        }
+      }),
+      availableCameras().then((cameras) => _cameras = cameras),
+    ]);
 
-  // Initialize analytics service
-  await Get.putAsync(() => AnalyticsService().init());
+    // Initialize analytics service
+    await Get.putAsync(() => AnalyticsService().init());
 
-  // Calculate and log startup time
-  final startupTime = DateTime.now().difference(startTime).inMilliseconds;
-  await AnalyticsService.to.logAppStartupTime(startupTime);
-
-  // Set up error handling
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    AnalyticsService.to.logError(
-      errorType: 'flutter_error',
-      errorMessage: details.exception.toString(),
-      screenName: details.context?.toString(),
+    // Log startup performance
+    final startupTime = DateTime.now().difference(startTime).inMilliseconds;
+    await AnalyticsService.to.logAppStartupTime(startupTime);
+    await AnalyticsService.to.logEvent(
+      name: 'app_initialized',
+      parameters: {
+        'startup_time_ms': startupTime,
+        'platform': Platform.operatingSystem,
+      },
     );
-  };
 
-  // Run app with error zone
-  runZonedGuarded(
-        () => runApp(const MyApp()),
-        (error, stackTrace) {
-      AnalyticsService.to.logError(
-        errorType: 'zone_error',
-        errorMessage: error.toString(),
+    // Set up global error handling
+    FlutterError.onError = (FlutterErrorDetails details) async {
+      FlutterError.presentError(details);
+      await AnalyticsService.to.logError(
+        errorType: 'flutter_error',
+        errorMessage: details.exception.toString(),
+        screenName: details.context?.toString(),
       );
-    },
-  );
+    };
+
+    // Run app with error zone
+    runZonedGuarded(
+          () => runApp(const MyApp()),
+          (error, stackTrace) async {
+        await AnalyticsService.to.logError(
+          errorType: 'zone_error',
+          errorMessage: error.toString(),
+        );
+      },
+    );
+  } catch (e, stack) {
+    // Fallback error handling if initialization fails
+    debugPrint('App initialization failed: $e');
+    debugPrint(stack.toString());
+
+    // Try to log the error even if analytics might not be available
+    try {
+      await AnalyticsService.to?.logError(
+        errorType: 'init_error',
+        errorMessage: e.toString(),
+      );
+    } catch (_) {}
+
+    runApp(const MyApp());
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -161,6 +190,74 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
   bool _showTips = true; // Always show tips when screen opens
   File? _currentImageFile; // Track the current image file
 
+  // In your _RealTimeDetectionState class:
+
+// Add this when the screen first loads
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeCamera();
+    AnalyticsService.to.logScreenView(
+      screenName: 'realtime_detection',
+      screenClass: 'RealTimeDetection',
+    );
+  }
+
+// Add this when processing starts
+  Future<void> _processFrame(CameraImage image) async {
+    try {
+      AnalyticsService.to.logDetectionAttempt(
+        method: 'realtime_camera',
+        source: 'camera_stream',
+      );
+      // ... rest of your existing code
+    } catch (e) {
+      AnalyticsService.to.logDetectionError(
+        method: 'realtime_camera',
+        errorType: 'processing_error',
+        errorMessage: e.toString(),
+      );
+      // ... rest of error handling
+    }
+  }
+
+// Add this when getting API results
+  Future<void> _sendImageToAPI(File imageFile) async {
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
+      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+      // Declare variables before using them
+      final startTime = DateTime.now(); // For measuring processing time
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        var jsonResponse = json.decode(response.body);
+        String detectionResult = jsonResponse['result']; // Define here
+        double detectedConfidence = jsonResponse['confidence'].toDouble();
+
+        setState(() {
+          result = "$detectionResult (${detectedConfidence.toStringAsFixed(2)}%)";
+          recommendation = jsonResponse['description'];
+          confidence = detectedConfidence;
+        });
+
+        // Log detection result
+        await AnalyticsService.to.logDetectionResult(
+          method: 'api_call',
+          result: detectionResult,
+          confidence: detectedConfidence,
+          isArmyworm: detectionResult.toLowerCase().contains('armyworm'),
+          processingTimeMs: DateTime.now().difference(startTime).inMilliseconds,
+        );
+      }
+    } catch (e) {
+      // Error handling
+    }
+  }
+
   // API URL
   final String apiUrl = "https://newapi-uxzc.onrender.com/detect";
 
@@ -176,12 +273,6 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
   bool _isCameraInitialized = false;
   bool _isStreamActive = false;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _initializeCamera();
-  }
 
   @override
   void dispose() {
@@ -301,29 +392,6 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
     }
   }
 
-  Future<void> _processFrame(CameraImage image) async {
-    try {
-      // Clean up previous image file if exists
-      _cleanUpImageFile();
-
-      // Convert CameraImage to File
-      final File imageFile = await _convertImageToFile(image);
-      _currentImageFile = imageFile; // Store the current image file
-
-      // Send to API
-      await _sendImageToAPI(imageFile);
-
-    } catch (e) {
-      print("Error processing frame: $e");
-    } finally {
-      if (mounted) {
-        setState(() {
-          isBusy = false;
-        });
-      }
-    }
-  }
-
   Future<File> _convertImageToFile(CameraImage image) async {
     final tempDir = await getTemporaryDirectory();
     final tempFile = File('${tempDir.path}/temp_frame_${DateTime.now().millisecondsSinceEpoch}.jpg');
@@ -339,51 +407,6 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
     }
   }
 
-  Future<void> _sendImageToAPI(File imageFile) async {
-    try {
-      var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
-      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
-
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        var jsonResponse = json.decode(response.body);
-        String detectionResult = jsonResponse['result'];
-        String description = jsonResponse['description'];
-        double detectedConfidence = jsonResponse['confidence'].toDouble();
-
-        setState(() {
-          result = "$detectionResult (${detectedConfidence.toStringAsFixed(2)}%)";
-          recommendation = description;
-          confidence = detectedConfidence;
-        });
-
-        // Stop camera stream before navigating
-        await _stopCameraStream();
-
-        // Navigate to results screen
-        if (mounted) {
-          await Get.to(() => DetectionResultScreen(
-            image: imageFile,
-            result: result,
-            recommendation: recommendation,
-          ));
-
-          // When returning from results screen, reset everything
-          if (mounted) {
-            await _resetAndRestartCamera();
-          }
-        }
-      } else {
-        print("API Error: ${response.statusCode}");
-        _showSnackBar("Error analyzing image. Please try again.");
-      }
-    } catch (e) {
-      print("Exception in API call: $e");
-      _showSnackBar("Connection error. Please check your internet.");
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
