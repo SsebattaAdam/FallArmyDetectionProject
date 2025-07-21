@@ -9,6 +9,7 @@ import '../../common/custom_appbar.dart';
 import '../../common/custom_container.dart';
 import '../../constants/constants.dart';
 import '../../detectionCode/Upload_withApi_added.dart';
+import '../../detectionCode/herbisides.dart';
 import '../../detectionCode/upload_capture.dart';
 import '../../main.dart';
 import '../category/widgets/spraying_widget.dart';
@@ -68,7 +69,7 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
           children: [
             // Upload an Image Card
             _buildDetectionCard(
-              title: "Upload an Image,",
+              title: "Upload an Image",
               icon: Icons.upload,
               onTap: () {
                 Get.to(() => const UploadCaptureScreenapi());
@@ -116,13 +117,13 @@ class _Homepage2DefaultState extends State<Homepage2Default> {
     title: "Herbicides",
     subtitle: "View Details",
     icon: Icons.more_horiz_sharp,
-    destinationPage: ExpertInsightsPage(),
+    destinationPage: Herbisides(),
     ),
     _buildCard(
     title: "Expert Insights",
     subtitle: "View Details",
     icon: Icons.insights,
-    destinationPage:  DocumentUploadPage(),
+    destinationPage:  ExpertInsightsPage(),
     ),
     ],
     ),
