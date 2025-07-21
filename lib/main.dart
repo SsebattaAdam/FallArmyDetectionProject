@@ -20,13 +20,25 @@ import 'package:path/path.dart';
 import 'package:provider/provider.dart';
 import 'Analytics/AnalyticsService.dart';
 import 'constants/constants.dart';
+
+import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
+import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'detectionCode/results.dart';
-import 'map/providerformap/providerformap.dart';
+import 'map/providerformap/providerformap.dart'; // For FirebaseAnalytics
+
 
 late List<CameraDescription> _cameras;
 Widget defaultHome = main_page();
 
 Future<void> main() async {
+
   // Ensure Flutter is initialized first
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -36,20 +48,25 @@ Future<void> main() async {
       Firebase.initializeApp(),
       availableCameras().then((cameras) => _cameras = cameras),
       dotenv.load(fileName: ".env"), // Load environment variables
+
+
     ]);
 
     // Initialize analytics service
     await Get.putAsync(() => AnalyticsService().init());
 
+
     // Set up error handling
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
       AnalyticsService.to.logError(
+
         errorType: 'flutter_error',
         errorMessage: details.exception.toString(),
         screenName: details.context?.toString(),
       );
     };
+
 
     // Run app in the same zone
     runApp(const MyApp());
@@ -57,6 +74,7 @@ Future<void> main() async {
   } catch (error, stackTrace) {
     print('Error during initialization: $error');
     // Still run the app even if initialization fails
+
     runApp(const MyApp());
   }
 }
@@ -477,340 +495,339 @@ class _RealTimeDetectionState extends State<RealTimeDetection> with WidgetsBindi
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-        onWillPop: () async {
-          await _stopCameraStream();
-          _cleanUpImageFile();
-          return true;
-        },
-        child: Scaffold(
-            appBar: AppBar(
-              backgroundColor: Colors.green,
-              title: const Text(
-                  'Realtime Detection',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  )
-              ),
-              centerTitle: true,
-              iconTheme: IconThemeData(color: Colors.white),
-              leading: IconButton(
-                icon: Icon(Icons.arrow_back),
-                onPressed: () async {
-                  await _stopCameraStream();
-                  _cleanUpImageFile();
-                  Get.back();
-                },
-              ),
-            ),
-            body: Stack(
-              children: [
+      onWillPop: () async {
+        await _stopCameraStream();
+        _cleanUpImageFile();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.green,
+          title: const Text(
+              'Realtime Detection',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              )
+          ),
+          centerTitle: true,
+          iconTheme: IconThemeData(color: Colors.white),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () async {
+              await _stopCameraStream();
+              _cleanUpImageFile();
+              Get.back();
+            },
+          ),
+        ),
+        body: Stack(
+          children: [
             // Camera Preview
             _isCameraInitialized
-            ? Container(
-            width: double.infinity,
+                ? Container(
+              width: double.infinity,
               height: double.infinity,
               child: CameraPreview(controller),
             )
                 : Center(child: CircularProgressIndicator(color: Colors.green)),
 
-    // Targeting overlay
-    if (_isCameraInitialized && !_showTips)
-    Positioned.fill(
-    child: Center(
-    child: Container(
-    width: 200,
-    height: 200,
-    decoration: BoxDecoration(
-    border: Border.all(color: Colors.green, width: 2),
-    borderRadius: BorderRadius.circular(10),
-    ),
-    ),
-    ),
-    ),
+            // Targeting overlay
+            if (_isCameraInitialized && !_showTips)
+              Positioned.fill(
+                child: Center(
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.green, width: 2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
 
-    // Processing indicator
-    if (isBusy)
-    Positioned.fill(
-    child: Container(
-    color: Colors.black.withOpacity(0.7),
-    child: Center(
-    child: Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-    CircularProgressIndicator(color: Colors.green),
-    SizedBox(height: 16),
-    Text(
-    "Analyzing image...",
-    style: TextStyle(
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-    ),
-    ),
-    ],
-    ),
-    ),
-    ),
-    ),
-
-    // Location loading indicator
-    if (_isLocationLoading)
-    Positioned(
-    top: 10,
-    right: 10,
-    child: Container(
-    padding: EdgeInsets.all(8),
-    decoration: BoxDecoration(
-    color: Colors.black54,
-    borderRadius: BorderRadius.circular(20),
-    ),
-    child: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-    SizedBox(
-    width: 16,
-    height: 16,
-    child: CircularProgressIndicator(
-    color: Colors.white,
-    strokeWidth: 2,
-    ),
-    ),
-    SizedBox(width: 8),
-    Text(
-    "Getting location...",
-    style: TextStyle(
-    color: Colors.white,
-    fontSize: 12,
-    ),
-    ),
-    ],
-    ),
-    ),
-    ),
-
-    // Location status indicator
-    if (!_isLocationLoading && _currentPosition != null && !_showTips)
-    Positioned(
-    top: 10,
-    right: 10,
-    child: Container(
-    padding: EdgeInsets.all(8),
-    decoration: BoxDecoration(
-    color: _isLocationInUganda() ? Colors.green.withOpacity(0.7) : Colors.red.withOpacity(0.7),
-    borderRadius: BorderRadius.circular(20),
-    ),
-    child: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-    Icon(
-    Icons.location_on,
-    color: Colors.white,
-    size: 16,
-    ),
-    SizedBox(width: 4),
-    Text(
-    _isLocationInUganda() ? "Location OK" : "Outside Uganda",
-    style: TextStyle(
-    color: Colors.white,
-    fontSize: 12,
-    ),
-    ),
-    ],
-    ),
-    ),
-    ),
-
-                // Instruction text
-                if (_isCameraInitialized && !_showTips)
-                  Positioned(
-                    bottom: 20,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "Point camera at corn leaf",
+            // Processing indicator
+            if (isBusy)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.7),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.green),
+                        SizedBox(height: 16),
+                        Text(
+                          "Analyzing image...",
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+            // Location loading indicator
+            if (_isLocationLoading)
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        "Getting location...",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Location status indicator
+            if (!_isLocationLoading && _currentPosition != null && !_showTips)
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _isLocationInUganda() ? Colors.green.withOpacity(0.7) : Colors.red.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        _isLocationInUganda() ? "Location OK" : "Outside Uganda",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Instruction text
+            if (_isCameraInitialized && !_showTips)
+              Positioned(
+                bottom: 20,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      "Point camera at corn leaf",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
+                ),
+              ),
 
-                // Tips Overlay (always shown when _showTips is true)
-                if (_showTips && _isCameraInitialized)
-                  Positioned.fill(
+            // Tips Overlay (always shown when _showTips is true)
+            if (_showTips && _isCameraInitialized)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.8),
+                  child: Center(
                     child: Container(
-                      color: Colors.black.withOpacity(0.8),
-                      child: Center(
-                        child: Container(
-                          margin: EdgeInsets.all(20),
-                          padding: EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
+                      margin: EdgeInsets.all(20),
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Real-time Detection Tips",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                "Real-time Detection Tips",
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                              SizedBox(height: 15),
-                              Text(
-                                "1. Hold the camera steady for best results.\n"
-                                    "2. Position the leaf inside the green square.\n"
-                                    "3. Ensure good lighting conditions.\n"
-                                    "4. Keep the camera 15-20cm from the leaf.\n"
-                                    "5. Wait for automatic detection to occur.\n"
-                                    "6. Location services must be enabled.",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  height: 1.5,
-                                ),
-                              ),
-                              SizedBox(height: 20),
+                          SizedBox(height: 15),
+                          Text(
+                            "1. Hold the camera steady for best results.\n"
+                                "2. Position the leaf inside the green square.\n"
+                                "3. Ensure good lighting conditions.\n"
+                                "4. Keep the camera 15-20cm from the leaf.\n"
+                                "5. Wait for automatic detection to occur.\n"
+                                "6. Location services must be enabled.",
+                            style: TextStyle(
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                          ),
+                          SizedBox(height: 20),
 
-                              // Location status in tips
-                              if (_currentPosition == null)
-                                Container(
-                                  padding: EdgeInsets.all(10),
-                                  margin: EdgeInsets.only(bottom: 15),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.orange),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.location_off, color: Colors.orange),
-                                      SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          "Location services required. Please enable location.",
-                                          style: TextStyle(color: Colors.orange[800]),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              else if (!_isLocationInUganda())
-                                Container(
-                                  padding: EdgeInsets.all(10),
-                                  margin: EdgeInsets.only(bottom: 15),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.red),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.warning, color: Colors.red),
-                                      SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          "Your location appears to be outside Uganda. Detection may not work correctly.",
-                                          style: TextStyle(color: Colors.red[800]),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              else
-                                Container(
-                                  padding: EdgeInsets.all(10),
-                                  margin: EdgeInsets.only(bottom: 15),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.green),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.location_on, color: Colors.green),
-                                      SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          "Location services enabled and within Uganda.",
-                                          style: TextStyle(color: Colors.green[800]),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          // Location status in tips
+                          if (_currentPosition == null)
+                            Container(
+                              padding: EdgeInsets.all(10),
+                              margin: EdgeInsets.only(bottom: 15),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.orange),
+                              ),
+                              child: Row(
                                 children: [
-                                  if (_currentPosition == null)
-                                    ElevatedButton.icon(
-                                      onPressed: _getCurrentLocation,
-                                      icon: Icon(Icons.location_searching),
-                                      label: Text("Get Location"),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue,
-                                        foregroundColor: Colors.white,
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 12,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(30),
-                                        ),
-                                      ),
-                                    ),
-
-                                  ElevatedButton(
-                                    onPressed: _currentPosition == null ? null : () {
-                                      setState(() {
-                                        _showTips = false;
-                                      });
-                                      _startCameraStream();
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      foregroundColor: Colors.white,
-                                      disabledBackgroundColor: Colors.grey,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 30,
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(30),
-                                      ),
-                                    ),
+                                  Icon(Icons.location_off, color: Colors.orange),
+                                  SizedBox(width: 10),
+                                  Expanded(
                                     child: Text(
-                                      "Start Detection",
-                                      style: TextStyle(fontSize: 16),
+                                      "Location services required. Please enable location.",
+                                      style: TextStyle(color: Colors.orange[800]),
                                     ),
                                   ),
                                 ],
                               ),
+                            )
+                          else if (!_isLocationInUganda())
+                            Container(
+                              padding: EdgeInsets.all(10),
+                              margin: EdgeInsets.only(bottom: 15),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.red),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.warning, color: Colors.red),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      "Your location appears to be outside Uganda. Detection may not work correctly.",
+                                      style: TextStyle(color: Colors.red[800]),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: EdgeInsets.all(10),
+                              margin: EdgeInsets.only(bottom: 15),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.green),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.location_on, color: Colors.green),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      "Location services enabled and within Uganda.",
+                                      style: TextStyle(color: Colors.green[800]),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              if (_currentPosition == null)
+                                ElevatedButton.icon(
+                                  onPressed: _getCurrentLocation,
+                                  icon: Icon(Icons.location_searching),
+                                  label: Text("Get Location"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                  ),
+                                ),
+
+                              ElevatedButton(
+                                onPressed: _currentPosition == null ? null : () {
+                                  setState(() {
+                                    _showTips = false;
+                                  });
+                                  _startCameraStream();
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor: Colors.grey,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 30,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                                child: Text(
+                                  "Start Detection",
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
-              ],
-            ),
+                ),
+              ),
+          ],
         ),
+      ),
     );
   }
 }
-

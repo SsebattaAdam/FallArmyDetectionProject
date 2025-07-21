@@ -17,7 +17,6 @@ import '../map/views/newprov.dart';
 import 'community/community.dart';
 import 'home/newpage.dart';
 import 'home/homepagedef.dart';
-import 'map/fallarmywormdisplaymap.dart';
 
 class main_page extends StatelessWidget {
    main_page({super.key});
