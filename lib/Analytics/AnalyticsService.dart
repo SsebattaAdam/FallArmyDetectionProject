@@ -1,89 +1,209 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 class AnalyticsService extends GetxService {
   static AnalyticsService get to => Get.find<AnalyticsService>();
   final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+  bool _isInitialized = false;
 
-  // Initialize service
   Future<AnalyticsService> init() async {
-    // Set analytics collection enabled (can be toggled based on user preferences)
-    await _analytics.setAnalyticsCollectionEnabled(true);
+    try {
+      await _analytics.setAnalyticsCollectionEnabled(true);
 
-    // Log app open event
-    await logAppOpen();
+      if (kDebugMode) {
+        // Enable verbose logging in debug mode
+        await _analytics.setSessionTimeoutDuration(const Duration(minutes: 30));
+        debugPrint('Firebase Analytics initialized. Session ID: ${await _analytics.getSessionId()}');
+      }
+
+      await logAppOpen();
+      _isInitialized = true;
+
+      debugPrint('AnalyticsService initialized successfully');
+    } catch (e, stack) {
+      debugPrint('Error initializing AnalyticsService: $e\n$stack');
+      _isInitialized = false;
+    }
     return this;
   }
 
-  // Get observer for automatic screen tracking
   FirebaseAnalyticsObserver getObserver() {
     return FirebaseAnalyticsObserver(analytics: _analytics);
   }
 
-  // ===== USER TRACKING =====
+  // === Utility Functions ===
+  int _currentTimestamp() => DateTime.now().millisecondsSinceEpoch;
 
-  // Track user ID (call after login)
-  Future<void> setUserId(String userId) async {
-    await _analytics.setUserId(id: userId);
+  Map<String, Object> _withTimestamp(Map<String, Object> params) {
+    return {
+      ...params,
+      'timestamp': _currentTimestamp(),
+    };
   }
 
-  // Track user properties
-  Future<void> setUserProperty({required String name, required String? value}) async {
-    await _analytics.setUserProperty(name: name, value: value);
-  }
-
-  // Track login
-  Future<void> logLogin({String? method}) async {
-    await _analytics.logLogin(loginMethod: method ?? 'default');
-  }
-
-  // Track signup
-  Future<void> logSignUp({String? method}) async {
-    await _analytics.logSignUp(signUpMethod: method ?? 'default');
-  }
-
-  // ===== NAVIGATION TRACKING =====
-
-  // Track screen views
-  Future<void> logScreenView({
-    required String screenName,
-    String? screenClass,
-  }) async {
-    await _analytics.logScreenView(
-      screenName: screenName,
-      screenClass: screenClass,
+  Future<void> logAppStartupTime(int milliseconds) async {
+    await logEvent(
+      name: 'app_startup_time',
+      parameters: {'milliseconds': milliseconds},
     );
   }
 
-  // Track navigation between screens
+  Future<void> logError({
+    required String errorType,
+    required String errorMessage,
+    String? screenName,
+  }) async {
+    await logEvent(
+      name: 'app_error',
+      parameters: {
+        'error_type': errorType,
+        'error_message': errorMessage,
+        if (screenName != null) 'screen_name': screenName,
+      },
+    );
+  }
+
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+    bool debugLog = true,
+  }) async {
+    if (!_isInitialized) {
+      debugPrint('Analytics not initialized. Event $name not sent.');
+      return;
+    }
+
+    try {
+      final paramsWithTimestamp = _withTimestamp(parameters);
+      await _analytics.logEvent(
+        name: name,
+        parameters: paramsWithTimestamp,
+      );
+
+      if (debugLog || kDebugMode) {
+        debugPrint('''
+🎯 Analytics Event Logged
+┌ Event: $name
+${paramsWithTimestamp.entries.map((e) => '├ ${e.key}: ${e.value}').join('\n')}
+└ Timestamp: ${paramsWithTimestamp['timestamp']}
+''');
+      }
+    } catch (e, stack) {
+      debugPrint('''
+❌ Failed to log event: $name
+Error: $e
+Parameters: $parameters
+Stack: $stack
+''');
+    }
+  }
+
+  // === User Tracking ===
+  Future<void> setUserId(String? userId) async {
+    if (!_isInitialized) return;
+
+    try {
+      await _analytics.setUserId(id: userId);
+      debugPrint('User ID set: ${userId ?? 'null'}');
+    } catch (e, stack) {
+      await _handleError('setUserId', e, stack);
+    }
+  }
+
+  Future<void> setUserProperty({required String name, required String? value}) async {
+    if (!_isInitialized) return;
+
+    try {
+      await _analytics.setUserProperty(name: name, value: value);
+      debugPrint('User property set - $name: ${value ?? 'null'}');
+    } catch (e, stack) {
+      await _handleError('setUserProperty', e, stack);
+    }
+  }
+
+  Future<void> logLogin({String? method}) async {
+    await logEvent(
+      name: 'login',
+      parameters: {'method': method ?? 'default'},
+    );
+  }
+
+  Future<void> logSignUp({String? method}) async {
+    await logEvent(
+      name: 'sign_up',
+      parameters: {'method': method ?? 'default'},
+    );
+  }
+
+  // === Navigation Tracking ===
+  Future<void> logScreenView({
+    required String screenName,
+    String? screenClass,
+    bool enableFirebaseScreenView = true,
+  }) async {
+    if (enableFirebaseScreenView) {
+      try {
+        await _analytics.logScreenView(
+          screenName: screenName,
+          screenClass: screenClass ?? screenName,
+        );
+      } catch (e, stack) {
+        await _handleError('logScreenView', e, stack);
+      }
+    }
+
+    await logEvent(
+      name: 'screen_view',
+      parameters: {
+        'screen_name': screenName,
+        if (screenClass != null) 'screen_class': screenClass,
+      },
+    );
+  }
+
   Future<void> logNavigation(String fromScreen, String toScreen) async {
-    await _analytics.logEvent(
+    await logEvent(
       name: 'navigation',
       parameters: {
         'from_screen': fromScreen,
         'to_screen': toScreen,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
       },
     );
   }
 
-  // ===== DETECTION TRACKING =====
+  // === Detection Tracking ===
+  Future<void> logImageUpload({required String source}) async {
+    await logEvent(
+      name: 'image_upload',
+      parameters: {'source': source},
+    );
+  }
 
-  // Track detection attempts
-  Future<void> logDetectionAttempt({
-    required String method,
-    String? source,
+  Future<void> logLeafValidation({
+    required bool isMaizeLeaf,
+    String? reasonIfRejected,
   }) async {
-    await _analytics.logEvent(
+    await logEvent(
+      name: 'leaf_validation',
+      parameters: {
+        'is_maize_leaf': isMaizeLeaf,
+        if (!isMaizeLeaf && reasonIfRejected != null)
+          'rejection_reason': reasonIfRejected,
+      },
+    );
+  }
+
+  Future<void> logDetectionAttempt({required String method, String? source}) async {
+    await logEvent(
       name: 'detection_attempt',
       parameters: {
         'method': method,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        if (source != null) 'source': source,
       },
     );
   }
 
-  // Track detection results
   Future<void> logDetectionResult({
     required String method,
     required String result,
@@ -91,7 +211,7 @@ class AnalyticsService extends GetxService {
     required bool isArmyworm,
     required int processingTimeMs,
   }) async {
-    await _analytics.logEvent(
+    await logEvent(
       name: 'detection_result',
       parameters: {
         'method': method,
@@ -99,172 +219,138 @@ class AnalyticsService extends GetxService {
         'confidence': confidence,
         'is_armyworm': isArmyworm,
         'processing_time_ms': processingTimeMs,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
       },
     );
   }
 
-  // Track detection errors
   Future<void> logDetectionError({
     required String method,
     required String errorType,
     required String errorMessage,
   }) async {
-    await _analytics.logEvent(
+    await logEvent(
       name: 'detection_error',
       parameters: {
         'method': method,
         'error_type': errorType,
         'error_message': errorMessage,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
       },
     );
   }
 
-  // ===== FEATURE USAGE TRACKING =====
-
-  // Track button clicks
+  // === Feature Usage ===
   Future<void> logButtonClick({
     required String buttonName,
     required String screenName,
     Map<String, Object>? additionalParams,
   }) async {
-    final Map<String, Object> parameters = {
-      'button_name': buttonName,
-      'screen_name': screenName,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    };
-
-    if (additionalParams != null) {
-      parameters.addAll(additionalParams);
-    }
-
-    await _analytics.logEvent(
+    await logEvent(
       name: 'button_click',
-      parameters: parameters,
-    );
-  }
-
-  // Track feature usage
-  Future<void> logFeatureUsage({
-    required String featureName,
-    Map<String, Object>? additionalParams,
-  }) async {
-    final Map<String, Object> parameters = {
-      'feature_name': featureName,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    };
-
-    if (additionalParams != null) {
-      parameters.addAll(additionalParams);
-    }
-
-    await _analytics.logEvent(
-      name: 'feature_usage',
-      parameters: parameters,
-    );
-  }
-
-  // Track sharing
-  Future<void> logShare({
-    required String contentType,
-    required String itemId,
-    required String method,
-  }) async {
-    await _analytics.logShare(
-      contentType: contentType,
-      itemId: itemId,
-      method: method,
-    );
-  }
-
-  // ===== PERFORMANCE TRACKING =====
-
-  // Track app startup time
-  Future<void> logAppStartupTime(int milliseconds) async {
-    await _analytics.logEvent(
-      name: 'app_startup_time',
       parameters: {
-        'milliseconds': milliseconds,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'button_name': buttonName,
+        'screen_name': screenName,
+        ...?additionalParams,
       },
     );
   }
 
-  // Track API response time
-  Future<void> logApiResponseTime({
-    required String endpoint,
-    required int milliseconds,
-    required bool isSuccess,
-    String? errorMessage,
+  // === Card View Tracking ===
+
+  /// Track viewing of information cards (pests/diseases)
+  Future<void> logCardViewed({
+    required String cardType, // 'pest', 'disease', etc.
+    required String cardName,
+    String? cardId,
+    String? category,
   }) async {
-    final Map<String, Object> parameters = {
-      'endpoint': endpoint,
-      'milliseconds': milliseconds,
-      'is_success': isSuccess,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    };
-
-    if (errorMessage != null) {
-      parameters['error_message'] = errorMessage;
-    }
-
-    await _analytics.logEvent(
-      name: 'api_response_time',
-      parameters: parameters,
+    await logEvent(
+      name: 'info_card_viewed',
+      parameters: {
+        'card_type': cardType,
+        'card_name': cardName,
+        if (cardId != null) 'card_id': cardId,
+        if (category != null) 'category': category,
+      },
     );
   }
 
-  // ===== STANDARD EVENTS =====
+  /// Track viewing of treatment recommendation cards
+  Future<void> logTreatmentCardViewed({
+    required String diseaseName,
+    required String recommendationId,
+    String? treatmentType, // 'chemical', 'organic', 'prevention'
+    int? severityLevel,
+  }) async {
+    await logEvent(
+      name: 'treatment_card_viewed',
+      parameters: {
+        'disease_name': diseaseName,
+        'recommendation_id': recommendationId,
+        if (treatmentType != null) 'treatment_type': treatmentType,
+        if (severityLevel != null) 'severity_level': severityLevel,
+      },
+    );
+  }
 
-  // App open
+  /// Track viewing of expert opinion cards
+  Future<void> logExpertOpinionCardViewed({
+    required String expertName,
+    required String topic,
+    String? expertiseLevel, // 'local', 'national', 'international'
+    String? organization,
+  }) async {
+    await logEvent(
+      name: 'expert_card_viewed',
+      parameters: {
+        'expert_name': expertName,
+        'topic': topic,
+        if (expertiseLevel != null) 'expertise_level': expertiseLevel,
+        if (organization != null) 'organization': organization,
+      },
+    );
+  }
+
+  /// Track card interactions (expanded/collapsed)
+  Future<void> logCardInteraction({
+    required String cardType,
+    required String cardId,
+    required String action, // 'expanded', 'collapsed', 'shared'
+    String? sourceScreen,
+  }) async {
+    await logEvent(
+      name: 'card_interaction',
+      parameters: {
+        'card_type': cardType,
+        'card_id': cardId,
+        'action': action,
+        if (sourceScreen != null) 'source_screen': sourceScreen,
+      },
+    );
+  }
+
+  // === Error Handling ===
+  Future<void> _handleError(String methodName, dynamic error, StackTrace stack) async {
+    debugPrint('''
+⚠️ Analytics Error in $methodName
+Error: $error
+Stack Trace: $stack
+''');
+  }
+
+  // === Standard Events ===
   Future<void> logAppOpen() async {
-    await _analytics.logAppOpen();
-  }
-
-  // Search
-  Future<void> logSearch(String searchTerm) async {
-    await _analytics.logSearch(searchTerm: searchTerm);
-  }
-
-  // Tutorial begin
-  Future<void> logTutorialBegin() async {
-    await _analytics.logTutorialBegin();
-  }
-
-  // Tutorial complete
-  Future<void> logTutorialComplete() async {
-    await _analytics.logTutorialComplete();
-  }
-
-  // Generic error
-  Future<void> logError({
-    required String errorType,
-    required String errorMessage,
-    String? screenName,
-  }) async {
-    final Map<String, Object> parameters = {
-      'error_type': errorType,
-      'error_message': errorMessage,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    };
-
-    if (screenName != null) {
-      parameters['screen_name'] = screenName;
+    try {
+      await _analytics.logAppOpen();
+      debugPrint('Logged app_open event');
+    } catch (e, stack) {
+      await _handleError('logAppOpen', e, stack);
     }
-
-    await _analytics.logEvent(
-      name: 'app_error',
-      parameters: parameters,
-    );
   }
 
-// Change this method in your AnalyticsService class
-  void logEvent({required String name, required Map<String, Object> parameters}) {
-    // Log the event using Firebase Analytics
-    FirebaseAnalytics.instance.logEvent(
-      name: name,
-      parameters: parameters,
+  Future<void> logSearch(String searchTerm) async {
+    await logEvent(
+      name: 'search',
+      parameters: {'search_term': searchTerm},
     );
   }
 }
